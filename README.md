@@ -98,3 +98,10 @@ Java tests and Angular production build passed in the current development enviro
 ## Public and customer portal
 
 See [customer portal setup, database migration and deployment limits](docs/customer-portal.md) for the new landing page, sign-up/sign-in flows, customer profile storage and hardened configuration baseline.
+
+
+![alt text](image.png)
+
+![alt text](image-1.png)
+
+![alt text](image-2.png)
