@@ -73,6 +73,10 @@ services:
   frontend:
     build:
       context: ./frontend
+    environment:
+    
+      BACKEND_URL: https://intellibank.onrender.com:8080
+      AI_SERVICE_URL: http://ai-service:8091
     ports:
       - "127.0.0.1:4200:80"
     depends_on:

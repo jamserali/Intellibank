@@ -47,6 +47,10 @@ Prerequisites: Docker Desktop with Compose v2, and 8 GB of available memory for 
 - **MCP server / AI service:** see the module-specific README files and configure the banking API base URL and read-only service credentials. MCP tools are read-only and retrieve their data from the REST API.
 - **PostgreSQL:** use the Compose service or configure the backend datasource through environment variables.
 
+### Render deployment
+
+Deploy the backend and PostgreSQL first, then deploy `frontend/` as a Docker web service using `frontend/Dockerfile`. Set the frontend service's `BACKEND_URL` environment variable to the backend's Render URL, including its scheme (for example, `https://your-backend.onrender.com`) and without a trailing slash. The frontend Nginx container substitutes this value at startup; Docker Compose continues to use its internal `backend` hostname. Set `AI_SERVICE_URL` to the AI service URL if deploying the assistant; otherwise the assistant API remains unavailable, but the frontend itself can start. Do not use `backend` as the Render URL.
+
 ## What is included
 
 - Synthetic clients, investments, historical values, revenue and expenses.
