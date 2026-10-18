@@ -1,0 +1,92 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-intellibank}
+      POSTGRES_USER: ${POSTGRES_USER:-intellibank}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5433}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-intellibank}
+      DB_USERNAME: ${POSTGRES_USER:-intellibank}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-change-me-local-only}
+      DB_DRIVER: org.postgresql.Driver
+      JWT_SECRET: ${JWT_SECRET:-replace-with-a-long-random-local-development-secret}
+      DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD:-Admin123!}
+      DEMO_BANKER_PASSWORD: ${DEMO_BANKER_PASSWORD:-Banker123!}
+      DEMO_ANALYST_PASSWORD: ${DEMO_ANALYST_PASSWORD:-Analyst123!}
+      DEMO_VIEWER_PASSWORD: ${DEMO_VIEWER_PASSWORD:-Viewer123!}
+    ports:
+      - "127.0.0.1:${BACKEND_HOST_PORT:-8081}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/api/v1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 15
+      start_period: 45s
+
+  mcp-server:
+    build:
+      context: ./mcp-server
+    environment:
+      BANKING_API_BASE_URL: http://backend:8080
+      MCP_SERVER_PORT: 8090
+      BANKING_API_USERNAME: ${MCP_API_USERNAME:-analyst@intellibank.local}
+      BANKING_API_PASSWORD: ${DEMO_ANALYST_PASSWORD:-Analyst123!}
+    ports:
+      - "127.0.0.1:8090:8090"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  ai-service:
+    build:
+      context: ./ai-service
+    environment:
+      BANKING_API_BASE_URL: http://backend:8080
+      MCP_SERVER_URL: http://mcp-server:8090
+      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2:3b}
+      OLLAMA_ENABLED: ${OLLAMA_ENABLED:-false}
+    ports:
+      - "127.0.0.1:8091:8091"
+    depends_on:
+      backend:
+        condition: service_healthy
+      mcp-server:
+        condition: service_started
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "127.0.0.1:4200:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    profiles: ["local-llm"]
+
+volumes:
+  postgres-data:
+  ollama-data:

@@ -1,0 +1,240 @@
+<div class="app-shell" *ngIf="authenticated">
+  <aside class="sidebar" [class.sidebar-open]="mobileNavOpen">
+    <div class="brand">
+      <div class="brand-mark">i</div>
+      <div class="brand-copy"><strong>intellibank</strong><span>AI FINANCIAL PLATFORM</span></div>
+    </div>
+    <div class="workspace-label">WORKSPACE</div>
+    <nav aria-label="Main navigation">
+      <button *ngFor="let item of navItems" type="button" class="nav-link" [class.active]="activeView === item.label" (click)="navigate(item.label)">
+        <span class="nav-icon">{{ item.icon }}</span><span>{{ item.label }}</span>
+        <span *ngIf="item.label === 'AI assistant'" class="nav-new">AI</span>
+      </button>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="secure-note"><span class="secure-dot"></span><span>Secure banking workspace</span></div>
+    <div class="profile"><div class="avatar">IB</div><div><strong>Banking team</strong><small>{{ userRole || 'Authenticated' }}</small></div><button class="profile-more logout-button" type="button" (click)="logout()" aria-label="Sign out">Sign out</button></div>
+    </div>
+  </aside>
+  <div *ngIf="mobileNavOpen" class="nav-scrim" (click)="mobileNavOpen = false"></div>
+
+  <main class="main-area">
+    <header class="topbar">
+      <button class="menu-toggle" type="button" aria-label="Open navigation" (click)="mobileNavOpen = !mobileNavOpen">☰</button>
+      <div class="breadcrumbs"><span>IntelliBank</span><span class="crumb-separator">/</span><strong>{{ activeView }}</strong></div>
+      <div class="topbar-actions"><span class="live-indicator"><i></i> Live data</span><button class="icon-button" type="button" aria-label="Notifications">♧</button><div class="mini-avatar">IB</div></div>
+    </header>
+
+    <div class="page-content">
+      <div class="page-heading">
+        <div><div class="eyebrow">FINANCIAL OVERVIEW</div><h1>{{ activeView === 'Overview' ? 'Good day' : activeView }}</h1><p>{{ activeView === 'Overview' ? 'Here’s what’s happening across your banking portfolio.' : pageDescription }}</p></div>
+        <button *ngIf="activeView === 'Clients'" class="button primary" type="button" (click)="openClientForm()">＋ Add client</button>
+        <div class="heading-actions">
+          <button *ngIf="activeView === 'Investments' && investments.length" class="button secondary" type="button" (click)="exportCsv(investments, 'investments.csv')">↓ Export CSV</button>
+          <button *ngIf="activeView === 'Investments'" class="button primary" type="button" (click)="openInvestmentForm()">＋ Add investment</button>
+          <button *ngIf="activeView === 'Revenue & expenses' && ledgerEntries.length" class="button secondary" type="button" (click)="exportCsv(ledgerEntries, 'revenue-expenses.csv')">↓ Export CSV</button>
+        </div>
+      </div>
+
+      <div *ngIf="activeView === 'Overview'" class="content-stack">
+        <section class="panel"><div class="panel-heading"><div><h2>Registered customers</h2><p>Persisted customer accounts | Demo banking environment</p></div><button class="button secondary" (click)="loadRegisteredCustomers()">Refresh</button></div>
+        <p *ngIf="customersLoading" role="status">Loading customers...</p><p *ngIf="customersError" role="alert">{{ customersError }}</p>
+        <div class="table-scroll" *ngIf="!customersLoading && !customersError"><table><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Status</th></tr></thead><tbody><tr *ngFor="let customer of registeredCustomers"><td>{{customer.fullName}}</td><td>{{customer.email}}</td><td>{{customer.phone}}</td><td>{{customer.status}}</td></tr></tbody></table><p *ngIf="!registeredCustomers.length">No customer registrations yet.</p></div></section>
+        <div *ngIf="loading" class="state-card"><span class="spinner"></span><span>Loading financial summary…</span></div>
+        <div *ngIf="error" class="error-card"><span class="error-icon">!</span><div><strong>Couldn’t load banking data</strong><p>{{ error }} Check your API connection and try again.</p></div><button class="button small secondary" (click)="loadOverview()">Retry</button></div>
+        <ng-container *ngIf="!loading && !error && summary">
+          <section class="kpi-grid dashboard-kpis">
+            <article class="kpi-card"><div class="kpi-top"><span class="kpi-label">Total clients</span><span class="kpi-icon violet">♙</span></div><div class="kpi-value">{{ summary.total_clients ?? '—' }}</div><div class="kpi-foot">Client relationships in the portfolio</div></article>
+            <article class="kpi-card"><div class="kpi-top"><span class="kpi-label">Clients with holdings</span><span class="kpi-icon green">⌁</span></div><div class="kpi-value">{{ summary.clients_with_holdings ?? '—' }}</div><div class="kpi-foot">Clients with current investment positions</div></article>
+            <article class="kpi-card"><div class="kpi-top"><span class="kpi-label">Capital invested</span><span class="kpi-icon blue">◈</span></div><div class="kpi-value">{{ formatAmount(summary.total_capital_invested) }}</div><div class="kpi-foot">{{ summary.total_investments ?? '—' }} investment positions</div></article>
+            <article class="kpi-card"><div class="kpi-top"><span class="kpi-label">Current portfolio value</span><span class="kpi-icon teal">↗</span></div><div class="kpi-value">{{ formatAmount(summary.current_portfolio_value) }}</div><div class="kpi-foot">Current position values from the API</div></article>
+            <article class="kpi-card"><div class="kpi-top"><span class="kpi-label">Realized P&amp;L</span><span class="kpi-icon green">↗</span></div><div class="kpi-value">{{ formatAmount(summary.realizedReturn) }}</div><div class="kpi-foot">Realized investment return</div></article>
+            <article class="kpi-card"><div class="kpi-top"><span class="kpi-label">Unrealized P&amp;L</span><span class="kpi-icon orange">↗</span></div><div class="kpi-value">{{ formatAmount(summary.unrealizedReturn) }}</div><div class="kpi-foot">Current value less invested capital</div></article>
+            <article class="kpi-card"><div class="kpi-top"><span class="kpi-label">Bank revenue</span><span class="kpi-icon teal">＋</span></div><div class="kpi-value">{{ formatAmount(summary.total_revenue) }}</div><div class="kpi-foot">Recognized revenue in the ledger</div></article>
+            <article class="kpi-card"><div class="kpi-top"><span class="kpi-label">Bank expenses</span><span class="kpi-icon orange">−</span></div><div class="kpi-value">{{ formatAmount(summary.total_expenses) }}</div><div class="kpi-foot">Recognized expenses in the ledger</div></article>
+            <article class="kpi-card"><div class="kpi-top"><span class="kpi-label">Net accounting profit</span><span class="kpi-icon blue">◉</span></div><div class="kpi-value">{{ formatAmount(summary.net_profit) }}</div><div class="kpi-foot">Revenue less expenses; excludes investment returns</div></article>
+            <article class="kpi-card"><div class="kpi-top"><span class="kpi-label">Total portfolio ROI</span><span class="kpi-icon violet">%</span></div><div class="kpi-value">{{ summary.total_roi !== undefined ? (summary.total_roi | number:'1.2-2') + '%' : '—' }}</div><div class="kpi-foot">Economic return divided by capital invested</div></article>
+            <article class="kpi-card"><div class="kpi-top"><span class="kpi-label">Profitable clients</span><span class="kpi-icon green">＋</span></div><div class="kpi-value">{{ summary.profitable_clients ?? '—' }}</div><div class="kpi-foot">Positive realized and unrealized return</div></article>
+            <article class="kpi-card"><div class="kpi-top"><span class="kpi-label">Loss-making clients</span><span class="kpi-icon orange">−</span></div><div class="kpi-value">{{ summary.loss_making_clients ?? '—' }}</div><div class="kpi-foot">Negative realized and unrealized return</div></article>
+          </section>
+          <section class="panel chart-panel">
+            <div class="panel-heading"><div><h2>Financial performance</h2><p>Trends from your connected banking data</p></div><span class="panel-period">Trend data</span></div>
+            <div *ngIf="trends.length; else noTrend" class="chart-wrap"><canvas #trendCanvas aria-label="Revenue, expenses, and profit trends"></canvas></div>
+            <ng-template #noTrend><div class="empty-state compact"><span class="empty-symbol">⌁</span><strong>No trend data available</strong><span>When the API returns trend records, they’ll appear here.</span></div></ng-template>
+          </section>
+          <div *ngIf="dataLoading" class="state-card"><span class="spinner"></span><span>Loading client and allocation analytics…</span></div>
+          <div *ngIf="dataError" class="error-card"><span class="error-icon">!</span><div><strong>Portfolio analytics unavailable</strong><p>{{ dataError }}</p></div><button class="button small secondary" (click)="loadAnalytics()">Retry</button></div>
+          <section *ngIf="!dataLoading && !dataError" class="analytics-grid dashboard-analytics">
+            <article class="panel analytics-panel"><div class="panel-heading"><div><h2>Top 5 profitable clients</h2><p>Ranked by economic return in the banking API</p></div><button class="text-button" (click)="navigate('Analytics')">Details →</button></div><ng-container *ngTemplateOutlet="analyticsTable; context: { $implicit: topClients }"></ng-container></article>
+            <article class="panel analytics-panel"><div class="panel-heading"><div><h2>Bottom 5 clients</h2><p>Ranked by economic return in the banking API</p></div><button class="text-button" (click)="navigate('Analytics')">Details →</button></div><ng-container *ngTemplateOutlet="analyticsTable; context: { $implicit: bottomClients }"></ng-container></article>
+          </section>
+          <section class="panel portfolio-panel">
+            <div class="panel-heading"><div><h2>Investment allocation by asset class</h2><p>Current position values grouped by asset class</p></div><button class="text-button" (click)="navigate('Analytics')">All analytics →</button></div>
+            <div class="portfolio-content">
+              <div class="portfolio-chart" *ngIf="assetAllocations.length"><canvas #overviewAllocationCanvas aria-label="Investment allocation by asset class"></canvas></div>
+              <div class="table-scroll portfolio-table" *ngIf="assetAllocations.length"><table><thead><tr><th>Asset class</th><th>Positions</th><th>Capital invested</th><th>Current value</th><th>Economic return</th></tr></thead><tbody><tr *ngFor="let item of assetAllocations"><td>{{ item.assetType }}</td><td>{{ item.investmentCount }}</td><td>{{ formatAmount(item.investedAmount) }}</td><td>{{ formatAmount(item.currentValue) }}</td><td>{{ formatAmount(item.economicReturn) }}</td></tr></tbody></table></div>
+              <div *ngIf="!assetAllocations.length && !dataLoading" class="empty-state"><strong>No asset allocation data</strong><span>Allocation details will appear when returned by the analytics API.</span></div>
+            </div>
+          </section>
+          <section class="summary-row">
+            <article class="panel summary-note"><span class="note-icon">✧</span><div><h3>Intelligent insights</h3><p>Explore portfolio performance and client analytics with the AI assistant.</p><button class="text-button" (click)="navigate('AI assistant')">Ask your assistant <span>→</span></button></div></article>
+            <article class="panel summary-note"><span class="note-icon soft-blue">◷</span><div><h3>Portfolio at a glance</h3><p>Capital invested: <strong>{{ formatAmount(summary.total_capital_invested) }}</strong><br>Current value: <strong>{{ formatAmount(summary.current_portfolio_value) }}</strong></p><button class="text-button" (click)="navigate('Investments')">View investments <span>→</span></button></div></article>
+          </section>
+        </ng-container>
+      </div>
+
+      <section *ngIf="activeView === 'Clients'" class="panel table-panel">
+        <div class="panel-heading clients-toolbar"><div><h2>Client directory</h2><p>Search, review, and manage your clients</p></div><button *ngIf="clients.length" class="button secondary" type="button" (click)="exportClients()">↓ Export CSV</button></div>
+        <label class="search-field"><span>⌕</span><input type="search" [(ngModel)]="search" (ngModelChange)="onSearchChange()" placeholder="Search clients by name, email, or industry…" aria-label="Search clients"><kbd>⌘ K</kbd></label>
+        <div *ngIf="clientLoading" class="state-card table-state"><span class="spinner"></span><span>Loading clients…</span></div>
+        <div *ngIf="clientError" class="inline-error"><span>{{ clientError }}</span><button class="text-button" (click)="loadClients()">Try again</button></div>
+        <div class="table-scroll" *ngIf="!clientLoading">
+          <table *ngIf="clients.length; else emptyClients">
+            <thead><tr><th>CLIENT</th><th>INDUSTRY</th><th>EMAIL</th><th>RISK PROFILE</th><th class="actions-heading">ACTIONS</th></tr></thead>
+            <tbody><tr *ngFor="let client of clients; trackBy: trackByIndex"><td><div class="client-cell"><span class="client-avatar">{{ (client.name || 'C').slice(0, 1).toUpperCase() }}</span><strong>{{ client.name || 'Unnamed client' }}</strong></div></td><td>{{ client.industry || '—' }}</td><td>{{ client.email || '—' }}</td><td>{{ client.riskProfile || '—' }}</td><td class="row-actions"><button type="button" class="table-action" title="Edit client" aria-label="Edit client" (click)="openClientForm(client)">✎</button><button type="button" class="table-action delete-action" title="Delete client" aria-label="Delete client" (click)="confirmDelete(client)">⌫</button></td></tr></tbody>
+          </table>
+          <ng-template #emptyClients><div class="empty-state"><span class="empty-symbol">♙</span><strong>{{ search ? 'No clients match your search' : 'No clients yet' }}</strong><span>{{ search ? 'Try a different name, email, or company.' : 'Your client records will appear here once connected.' }}</span></div></ng-template>
+        </div>
+        <div class="pagination" *ngIf="!clientLoading"><span>{{ totalClients ? 'Showing ' + ((page - 1) * pageSize + 1) + '–' + (Math.min(page * pageSize, totalClients)) + ' of ' + totalClients + ' clients' : 'No client records' }}</span><div><button type="button" class="page-button" [disabled]="page <= 1" (click)="changePage(-1)">← Previous</button><span class="page-count">{{ page }} / {{ clientPages }}</span><button type="button" class="page-button" [disabled]="page >= clientPages" (click)="changePage(1)">Next →</button></div></div>
+      </section>
+
+      <section *ngIf="activeView === 'Investments' || activeView === 'P&L'" class="panel table-panel">
+        <div class="panel-heading"><div><h2>{{ activeView === 'Investments' ? 'Investment portfolio' : 'Bank profit & loss' }}</h2><p>{{ activeView === 'Investments' ? 'Investment data from your banking service' : 'Bank-level financial performance' }}</p></div><button *ngIf="activeView === 'P&L' && pnl.length" class="button secondary" (click)="exportCsv(pnl, 'bank-pnl.csv')">↓ Export CSV</button></div>
+        <div *ngIf="activeView === 'Investments' && investmentLoading || activeView === 'P&L' && dataLoading" class="state-card"><span class="spinner"></span><span>Loading {{ activeView === 'Investments' ? 'investments' : 'P&L data' }}…</span></div>
+        <div *ngIf="activeView === 'Investments' && investmentError || activeView === 'P&L' && dataError" class="error-card"><span class="error-icon">!</span><div><strong>Data unavailable</strong><p>{{ activeView === 'Investments' ? investmentError : dataError }}</p></div><button class="button small secondary" (click)="activeView === 'Investments' ? loadInvestments() : loadPnl()">Retry</button></div>
+        <ng-container *ngIf="activeView === 'Investments' && !investmentLoading && !investmentError">
+          <div class="table-scroll" *ngIf="investments.length; else emptyInvestments">
+            <table>
+              <thead><tr><th>NAME</th><th>ASSET TYPE</th><th>SECTOR</th><th>INVESTED</th><th>CURRENT VALUE</th><th>REALIZED GAIN</th><th>PURCHASE DATE</th><th>ACTIONS</th></tr></thead>
+              <tbody><tr *ngFor="let item of investments; trackBy: trackByIndex">
+                <td><div class="client-cell"><span class="client-avatar">↗</span><strong>{{ item['name'] || '—' }}</strong></div><small class="sub-cell">{{ clientName(item['clientId']) }}</small></td>
+                <td>{{ item['assetType'] || '—' }}</td><td>{{ item['sector'] || '—' }}</td>
+                <td>{{ formatAmount(item['investedAmount']) }}</td><td>{{ formatAmount(item['currentValue']) }}</td><td>{{ formatAmount(item['realizedGain']) }}</td>
+                <td>{{ item['purchaseDate'] || '—' }}</td>
+                <td class="row-actions"><button type="button" class="table-action" title="Edit investment" aria-label="Edit investment" (click)="openInvestmentForm(item)">✎</button><button type="button" class="table-action delete-action" title="Delete investment" aria-label="Delete investment" (click)="investmentDeletePending = item">⌫</button></td>
+              </tr></tbody>
+            </table>
+          </div>
+          <ng-template #emptyInvestments><div class="empty-state"><span class="empty-symbol">⌁</span><strong>No investments yet</strong><span>Add an investment position to start tracking your portfolio.</span></div></ng-template>
+        </ng-container>
+        <ng-container *ngIf="activeView === 'P&L' && !dataLoading && !dataError">
+          <div class="table-scroll" *ngIf="pnl.length; else emptyPnl">
+            <table><thead><tr><th *ngFor="let key of objectKeys(pnl[0])">{{ displayKey(key) }}</th></tr></thead>
+              <tbody><tr *ngFor="let row of pnl; trackBy: trackByIndex"><td *ngFor="let key of objectKeys(row)">{{ isAmountKey(key) ? formatAmount(row[key]) : displayValue(row[key]) }}</td></tr></tbody>
+            </table>
+          </div>
+          <ng-template #emptyPnl><div class="empty-state"><span class="empty-symbol">▥</span><strong>No P&amp;L records available</strong><span>The API returned no bank profit and loss records.</span></div></ng-template>
+        </ng-container>
+      </section>
+
+      <section *ngIf="activeView === 'Revenue & expenses'" class="content-stack">
+        <section class="panel ledger-entry-panel">
+          <div class="panel-heading"><div><h2>Record revenue or expense</h2><p>Save a ledger entry to the connected banking service.</p></div></div>
+          <div *ngIf="ledgerFormError" class="inline-error" role="alert">{{ ledgerFormError }}</div>
+          <form class="ledger-form" (ngSubmit)="recordLedgerEntry()">
+            <label>Description<input name="ledgerDescription" required [(ngModel)]="ledgerForm.description" placeholder="Describe this entry"></label>
+            <label>Type<select name="ledgerCategory" required [(ngModel)]="ledgerForm.category"><option value="REVENUE">Revenue</option><option value="EXPENSE">Expense</option></select></label>
+            <label>Amount<input name="ledgerAmount" required type="number" min="0.01" step="any" [(ngModel)]="ledgerForm.amount" placeholder="Amount"></label>
+            <label>Date<input name="ledgerDate" required type="date" [(ngModel)]="ledgerForm.date"></label>
+            <label>Client <span class="optional-label">(optional)</span><select name="ledgerClient" [(ngModel)]="ledgerForm.clientId"><option value="">No client</option><option *ngFor="let client of investmentClients" [value]="client.id">{{ client.name || client.id }}</option></select></label>
+            <button class="button primary ledger-submit" type="submit" [disabled]="ledgerSaving">{{ ledgerSaving ? 'Saving…' : '＋ Record entry' }}</button>
+          </form>
+        </section>
+        <section class="panel table-panel ledger-list-panel">
+          <div class="panel-heading"><div><h2>Revenue &amp; expenses</h2><p>Ledger entries returned by the banking service</p></div><div class="ledger-tools"><select aria-label="Filter ledger entries" [(ngModel)]="ledgerFilter"><option value="ALL">All entries</option><option value="REVENUE">Revenue</option><option value="EXPENSE">Expenses</option></select><button class="button secondary small" type="button" (click)="loadLedger()">↻ Refresh</button></div></div>
+          <div *ngIf="ledgerLoading" class="state-card"><span class="spinner"></span><span>Loading ledger entries…</span></div>
+          <div *ngIf="ledgerError" class="error-card"><span class="error-icon">!</span><div><strong>Ledger unavailable</strong><p>{{ ledgerError }}</p></div><button class="button small secondary" (click)="loadLedger()">Retry</button></div>
+          <div class="table-scroll" *ngIf="!ledgerLoading && !ledgerError && filteredLedgerEntries.length">
+            <table><thead><tr><th>DESCRIPTION</th><th>TYPE</th><th>AMOUNT</th><th>DATE</th><th>CLIENT</th></tr></thead>
+              <tbody><tr *ngFor="let entry of filteredLedgerEntries; trackBy: trackByIndex"><td>{{ entry['description'] || '—' }}</td><td><span class="status-pill" [class.expense-pill]="isExpenseCategory(entry['category'])">{{ categoryLabel(entry['category']) }}</span></td><td>{{ formatAmount(entry['amount']) }}</td><td>{{ entry['date'] || '—' }}</td><td>{{ clientName(entry['clientId']) }}</td></tr></tbody>
+            </table>
+          </div>
+          <div *ngIf="!ledgerLoading && !ledgerError && !filteredLedgerEntries.length" class="empty-state compact"><span class="empty-symbol">⇄</span><strong>No {{ ledgerFilter === 'ALL' ? 'ledger' : ledgerFilter.toLowerCase() }} entries</strong><span>Ledger records are shown here after they’re returned by the API.</span></div>
+        </section>
+      </section>
+
+      <section *ngIf="activeView === 'Analytics'" class="content-stack">
+        <div *ngIf="dataLoading" class="state-card"><span class="spinner"></span><span>Loading portfolio analytics…</span></div>
+        <div *ngIf="dataError" class="error-card"><span class="error-icon">!</span><div><strong>Analytics unavailable</strong><p>{{ dataError }}</p></div><button class="button small secondary" (click)="loadAnalytics()">Retry</button></div>
+        <ng-container *ngIf="!dataLoading && !dataError">
+          <div class="analytics-grid">
+            <section class="panel analytics-panel"><div class="panel-heading"><div><h2>Top clients</h2><p>Highest contribution in the available dataset</p></div></div><ng-container *ngTemplateOutlet="analyticsTable; context: { $implicit: topClients }"></ng-container></section>
+            <section class="panel analytics-panel"><div class="panel-heading"><div><h2>Bottom clients</h2><p>Lowest contribution in the available dataset</p></div></div><ng-container *ngTemplateOutlet="analyticsTable; context: { $implicit: bottomClients }"></ng-container></section>
+          </div>
+          <section class="panel portfolio-panel"><div class="panel-heading"><div><h2>Portfolio allocation by asset class</h2><p>Current position values grouped by asset class</p></div><button *ngIf="assetAllocations.length" class="button secondary" (click)="exportCsv(assetAllocations, 'asset-allocation.csv')">↓ Export CSV</button></div>
+            <div class="portfolio-content"><div class="portfolio-chart" *ngIf="assetAllocations.length"><canvas #portfolioCanvas aria-label="Portfolio allocation by asset class"></canvas></div><div class="table-scroll portfolio-table" *ngIf="assetAllocations.length"><table><thead><tr><th>Asset class</th><th>Positions</th><th>Capital invested</th><th>Current value</th><th>Realized return</th><th>Unrealized return</th><th>Economic return</th></tr></thead><tbody><tr *ngFor="let item of assetAllocations"><td>{{ item.assetType }}</td><td>{{ item.investmentCount }}</td><td>{{ formatAmount(item.investedAmount) }}</td><td>{{ formatAmount(item.currentValue) }}</td><td>{{ formatAmount(item.realizedReturn) }}</td><td>{{ formatAmount(item.unrealizedReturn) }}</td><td>{{ formatAmount(item.economicReturn) }}</td></tr></tbody></table></div><div *ngIf="!assetAllocations.length" class="empty-state"><strong>No portfolio allocation data</strong><span>Asset-class allocation will appear when returned by the analytics API.</span></div></div>
+          </section>
+          <section class="panel table-panel"><div class="panel-heading"><div><h2>Sector-wise profitability</h2><p>Investment returns grouped by sector</p></div><button *ngIf="sectors.length" class="button secondary" (click)="exportCsv(sectors, 'sector-profitability.csv')">↓ Export CSV</button></div><div class="table-scroll" *ngIf="sectors.length"><table><thead><tr><th *ngFor="let key of objectKeys(sectors[0])">{{ displayKey(key) }}</th></tr></thead><tbody><tr *ngFor="let row of sectors; trackBy: trackByIndex"><td *ngFor="let key of objectKeys(row)">{{ isAmountKey(key) ? formatAmount(row[key]) : displayValue(row[key]) }}</td></tr></tbody></table></div><div *ngIf="!sectors.length" class="empty-state"><strong>No sector data available</strong><span>Sector profitability will appear when returned by the analytics API.</span></div></section>
+        </ng-container>
+      </section>
+
+      <ng-template #analyticsTable let-rows><div class="table-scroll" *ngIf="rows.length; else noAnalytics"><table><thead><tr><th *ngFor="let key of objectKeys(rows[0])">{{ displayKey(key) }}</th></tr></thead><tbody><tr *ngFor="let row of rows; trackBy: trackByIndex"><td *ngFor="let key of objectKeys(row)">{{ isAmountKey(key) ? formatAmount(row[key]) : displayValue(row[key]) }}</td></tr></tbody></table></div><ng-template #noAnalytics><div class="empty-state compact"><span class="empty-symbol">◌</span><strong>No analytics available</strong><span>There are no records to display.</span></div></ng-template></ng-template>
+
+      <section *ngIf="activeView === 'AI assistant'" class="chat-layout">
+        <div class="chat-intro"><div class="chat-orb">✧</div><div><div class="eyebrow">INTELLIBANK INTELLIGENCE</div><h2>Your financial co-pilot</h2><p>Ask questions about your banking data and explore insights in natural language.</p></div></div>
+        <div class="panel chat-panel">
+          <div class="chat-history"><div *ngFor="let message of chatMessages; trackBy: trackByIndex" class="chat-message" [class.user-message]="message.role === 'user'"><div class="chat-avatar">{{ message.role === 'assistant' ? '✧' : 'IB' }}</div><div class="message-bubble">{{ message.text }}</div></div><div *ngIf="chatLoading" class="chat-message"><div class="chat-avatar">✧</div><div class="message-bubble typing">Thinking<span>…</span></div></div></div>
+          <div *ngIf="chatError" class="inline-error chat-error">{{ chatError }} <button class="text-button" (click)="sendChat(chatMessages[chatMessages.length - 1].text)">Retry</button></div>
+          <div class="suggestions" *ngIf="chatMessages.length < 3"><span>TRY ASKING</span><button *ngFor="let prompt of suggestions" class="suggestion-chip" type="button" (click)="sendChat(prompt)">{{ prompt }}</button></div>
+          <form class="chat-composer" (ngSubmit)="sendChat()"><input name="chatInput" [(ngModel)]="chatInput" placeholder="Ask about your financial data…" [disabled]="chatLoading" aria-label="Message IntelliBank assistant"><button type="submit" class="send-button" [disabled]="!chatInput.trim() || chatLoading" aria-label="Send message">↑</button></form>
+          <div class="chat-disclaimer">AI responses are informational. Verify important financial decisions against your official records.</div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="login-screen" *ngIf="!authenticated">
+  <section class="login-card" aria-labelledby="login-title">
+    <div class="brand-mark login-brand">i</div>
+    <div class="eyebrow">SECURE BANKING WORKSPACE</div>
+    <h1 id="login-title">Sign in to IntelliBank</h1>
+    <p>Use a seeded local demo account or your configured credentials.</p>
+    <div *ngIf="loginError" class="inline-error" role="alert">{{ loginError }}</div>
+    <form (ngSubmit)="login()">
+      <label>Email address<input name="loginEmail" type="email" required autocomplete="username" [(ngModel)]="loginEmail"></label>
+      <label>Password<input name="loginPassword" type="password" required autocomplete="current-password" [(ngModel)]="loginPassword"></label>
+      <button class="button primary login-submit" type="submit" [disabled]="loginLoading">{{ loginLoading ? 'Signing in…' : 'Sign in' }}</button>
+    </form>
+    <small>See the project README for local demo credentials. Change them before sharing the environment.</small>
+  </section>
+</div>
+
+<div class="modal-backdrop" *ngIf="clientModal" (click)="clientModal = false">
+  <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="client-modal-title" (click)="$event.stopPropagation()">
+    <div class="modal-heading"><div><h2 id="client-modal-title">{{ editingClient ? 'Edit client' : 'Add a client' }}</h2><p>Enter client details for your banking directory.</p></div><button class="modal-close" type="button" (click)="clientModal = false" aria-label="Close">×</button></div>
+    <div *ngIf="clientError" class="inline-error">{{ clientError }}</div><form (ngSubmit)="saveClient()"><label>Full name<input required name="name" [(ngModel)]="clientForm.name" placeholder="Client name"></label><label>Email address<input required name="email" type="email" [(ngModel)]="clientForm.email" placeholder="name@company.com"></label><label>Industry<input required name="industry" [(ngModel)]="clientForm.industry" placeholder="Technology, healthcare, energy…"></label><label>Risk profile<input required name="riskProfile" [(ngModel)]="clientForm.riskProfile" placeholder="LOW, MEDIUM, or HIGH"></label><div class="modal-actions"><button class="button secondary" type="button" (click)="clientModal = false">Cancel</button><button class="button primary" type="submit" [disabled]="savingClient">{{ savingClient ? 'Saving…' : (editingClient ? 'Save changes' : 'Create client') }}</button></div></form>
+  </section>
+</div>
+
+<div class="modal-backdrop" *ngIf="deletePending" (click)="deletePending = null">
+  <section class="modal-card confirm-modal" role="dialog" aria-modal="true" aria-labelledby="delete-title" (click)="$event.stopPropagation()"><div class="modal-heading"><div><h2 id="delete-title">Delete client?</h2><p>This will permanently remove {{ deletePending.name || 'this client' }} from your client directory.</p></div></div><div class="modal-actions"><button class="button secondary" type="button" (click)="deletePending = null">Cancel</button><button class="button danger" type="button" (click)="deleteClient()">Delete client</button></div></section>
+</div>
+
+<div class="modal-backdrop" *ngIf="investmentModal" (click)="investmentModal = false">
+  <section class="modal-card investment-modal" role="dialog" aria-modal="true" aria-labelledby="investment-modal-title" (click)="$event.stopPropagation()">
+    <div class="modal-heading"><div><h2 id="investment-modal-title">{{ editingInvestment ? 'Edit investment' : 'Add an investment' }}</h2><p>Investment details are submitted using the banking service contract.</p></div><button class="modal-close" type="button" (click)="investmentModal = false" aria-label="Close">×</button></div>
+    <div *ngIf="investmentFormError" class="inline-error" role="alert">{{ investmentFormError }}</div>
+    <div *ngIf="investmentClientsError" class="inline-error" role="alert">{{ investmentClientsError }}</div>
+    <form class="investment-form" (ngSubmit)="saveInvestment()">
+      <label class="wide-field">Client
+        <select name="investmentClient" required [(ngModel)]="investmentForm.clientId" [disabled]="investmentClientsLoading">
+          <option value="" disabled>{{ investmentClientsLoading ? 'Loading clients…' : 'Select a client' }}</option>
+          <option *ngFor="let client of investmentClients" [value]="client.id">{{ client.name || client.id }}</option>
+        </select>
+      </label>
+      <label>Name<input name="investmentName" required [(ngModel)]="investmentForm.name" placeholder="Investment name"></label>
+      <label>Asset type<input name="investmentAssetType" required [(ngModel)]="investmentForm.assetType" placeholder="e.g. Equity"></label>
+      <label>Sector<input name="investmentSector" required [(ngModel)]="investmentForm.sector" placeholder="e.g. Technology"></label>
+      <label>Invested amount<input name="investedAmount" required type="number" min="0" step="any" [(ngModel)]="investmentForm.investedAmount"></label>
+      <label>Current value<input name="currentValue" required type="number" min="0" step="any" [(ngModel)]="investmentForm.currentValue"></label>
+      <label>Realized gain<input name="realizedGain" required type="number" step="any" [(ngModel)]="investmentForm.realizedGain"></label>
+      <label>Purchase date<input name="purchaseDate" required type="date" [(ngModel)]="investmentForm.purchaseDate"></label>
+      <div class="modal-actions wide-field"><button class="button secondary" type="button" (click)="investmentModal = false">Cancel</button><button class="button primary" type="submit" [disabled]="investmentSaving || investmentClientsLoading || !investmentClients.length">{{ investmentSaving ? 'Saving…' : (editingInvestment ? 'Save changes' : 'Create investment') }}</button></div>
+    </form>
+  </section>
+</div>
+
+<div class="modal-backdrop" *ngIf="investmentDeletePending" (click)="investmentDeletePending = null">
+  <section class="modal-card confirm-modal" role="dialog" aria-modal="true" aria-labelledby="delete-investment-title" (click)="$event.stopPropagation()"><div class="modal-heading"><div><h2 id="delete-investment-title">Delete investment?</h2><p>This will remove {{ investmentDeletePending['name'] || 'this investment' }} from the portfolio.</p></div></div><div class="modal-actions"><button class="button secondary" type="button" (click)="investmentDeletePending = null">Cancel</button><button class="button danger" type="button" (click)="deleteInvestment()">Delete investment</button></div></section>
+</div>

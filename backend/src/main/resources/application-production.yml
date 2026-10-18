@@ -1,0 +1,30 @@
+# Hardened configuration baseline; deployment still requires a security review.
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  h2:
+    console:
+      enabled: false
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+server:
+  error:
+    include-message: never
+    include-stacktrace: never
+intellibank:
+  demo:
+    enabled: false
+  security:
+    jwt-secret: ${JWT_SECRET}
+    jwt-expiration-seconds: ${JWT_EXPIRATION_SECONDS:900}
+logging:
+  level:
+    root: INFO
+    org.springframework.web: WARN
+    org.hibernate.SQL: WARN

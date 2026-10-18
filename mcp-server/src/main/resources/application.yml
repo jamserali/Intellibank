@@ -1,0 +1,41 @@
+server:
+  port: ${MCP_SERVER_PORT:8090}
+
+spring:
+  application:
+    name: intellibank-mcp-server
+  ai:
+    mcp:
+      server:
+        name: intellibank-banking
+        version: 1.0.0
+        type: SYNC
+
+banking:
+  api:
+    base-url: ${BANKING_API_BASE_URL:http://localhost:8080}
+    username: ${BANKING_API_USERNAME:}
+    password: ${BANKING_API_PASSWORD:}
+    connect-timeout: ${BANKING_API_CONNECT_TIMEOUT:3s}
+    read-timeout: ${BANKING_API_READ_TIMEOUT:10s}
+    paths:
+      clients: ${BANKING_API_CLIENTS_PATH:/api/v1/clients}
+      client-details: ${BANKING_API_CLIENT_DETAILS_PATH:/api/v1/clients/{clientId}}
+      client-investments: ${BANKING_API_CLIENT_INVESTMENTS_PATH:/api/v1/investments/client/{clientId}}
+      client-profit-loss: ${BANKING_API_CLIENT_PROFIT_LOSS_PATH:/api/v1/clients/{clientId}/pnl}
+      bank-profit-loss: ${BANKING_API_BANK_PROFIT_LOSS_PATH:/api/v1/reports/bank/pnl}
+      top-profitable-clients: ${BANKING_API_TOP_CLIENTS_PATH:/api/v1/analytics/top-clients}
+      bottom-profitable-clients: ${BANKING_API_BOTTOM_CLIENTS_PATH:/api/v1/analytics/bottom-clients}
+      portfolio-summary: ${BANKING_API_PORTFOLIO_PATH:/api/v1/analytics/portfolio}
+      revenue-summary: ${BANKING_API_REVENUE_PATH:/api/v1/revenues}
+      expense-summary: ${BANKING_API_EXPENSES_PATH:/api/v1/expenses}
+      sector-performance: ${BANKING_API_SECTOR_PERFORMANCE_PATH:/api/v1/analytics/sectors}
+      investment-performance: ${BANKING_API_INVESTMENT_PERFORMANCE_PATH:/api/v1/investments}
+      compare-client-profitability: ${BANKING_API_COMPARE_CLIENTS_PATH:/api/v1/clients/{clientId}/pnl}
+      profit-trends: ${BANKING_API_PROFIT_TRENDS_PATH:/api/v1/dashboard/trends}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
